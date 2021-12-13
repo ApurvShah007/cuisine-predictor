@@ -3,3 +3,6 @@ Things to do:
 2. Filter all the reviews for each restaurant in Boston -- use businessID for this
 3. Perform sentiment analysis on those reviews
 4. Compute a pos/neg ratio of the reviews for that business
+
+trained the model using train set
+extract cities from the train set

@@ -37,6 +37,9 @@ def load_data():
     return X_train, y_train, X_val, y_val, X_test, y_test
 
 def main():
+    # set the random seed to guarantee reproducibility
+    np.random.seed(0)
+
     # load the data
     X_train, y_train, X_val, y_val, X_test, y_test = load_data()
 
