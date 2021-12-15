@@ -52,7 +52,8 @@ def create_data(review_path, business_path="../Data/yelp_academic_dataset_busine
         # get the review_id business_id, review_text, and stars
         review_id = review_object["review_id"]                      # get the review ID
         business_id = review_object["business_id"]                  # get the ID of the business being reviewed
-        review_text = review_object["text"].lower().strip()                 # get the review itself
+        review_text = review_object["text"].lower().strip()         # get the review itself
+        review_year = review_object["date"][:4]                     # get the year of the review
         stars = review_object["stars"]                              # get the star rating of the review
 
         # if the business being reviewed is not a restaurant, then ignore it
@@ -73,6 +74,7 @@ def create_data(review_path, business_path="../Data/yelp_academic_dataset_busine
                 business_dict[business_id]["state"],
                 cuisine,
                 review_id,
+                review_year,
                 review_text
         ]
 
@@ -83,39 +85,43 @@ def create_data(review_path, business_path="../Data/yelp_academic_dataset_busine
     # return review_dict, review_labels
     return X, y
 
-# determine the file path for the necessary files
-train_review_path = "../Data/training_reviews.json"
-test_review_path = "../Data/test_reviews.json"
-output_dir = "../Data"
+def main():
+    # determine the file path for the necessary files
+    train_review_path = "../Data/training_reviews.json"
+    test_review_path = "../Data/test_reviews.json"
+    output_dir = "../Data"
 
-# now extract the training and test data using method above
-training_data, training_labels = create_data(train_review_path)
-X_test, y_test = create_data(test_review_path)
+    # now extract the training and test data using method above
+    training_data, training_labels = create_data(train_review_path)
+    X_test, y_test = create_data(test_review_path)
 
-# use sklearn's train-test-split to split training data into training and validation sets
-# use 70-30 train/val split
-X_train, X_val, y_train, y_val = train_test_split(training_data, training_labels, test_size=0.3, random_state=0)
+    # use sklearn's train-test-split to split training data into training and validation sets
+    # use 70-30 train/val split
+    X_train, X_val, y_train, y_val = train_test_split(training_data, training_labels, test_size=0.3, random_state=0)
 
-# create the dataframes for each set
-X_train_df = pd.DataFrame(X_train)
-y_train_df = pd.DataFrame(y_train)
+    # create the dataframes for each set
+    X_train_df = pd.DataFrame(X_train)
+    y_train_df = pd.DataFrame(y_train)
 
-X_val_df = pd.DataFrame(X_val)
-y_val_df = pd.DataFrame(y_val)
+    X_val_df = pd.DataFrame(X_val)
+    y_val_df = pd.DataFrame(y_val)
 
-X_test_df = pd.DataFrame(X_test)
-y_test_df = pd.DataFrame(y_test)
+    X_test_df = pd.DataFrame(X_test)
+    y_test_df = pd.DataFrame(y_test)
 
 
-# write out each dataframe to csv
-data_headers = ["BusinessId", "Name", "City", "State", "Cuisine", "ReviewId", "Review"]
-label_headers = ["Sentiment"]
+    # write out each dataframe to csv
+    data_headers = ["BusinessId", "Name", "City", "State", "Cuisine", "ReviewId", "Year", "Review"]
+    label_headers = ["Sentiment"]
 
-X_train_df.to_csv(f"{output_dir}/X_train.csv", sep=",", header=data_headers, index=False, encoding="utf-8", chunksize=1024)
-y_train_df.to_csv(f"{output_dir}/y_train.csv", sep=",", header=label_headers, index=False, encoding="utf-8", chunksize=1024)
+    X_train_df.to_csv(f"{output_dir}/X_train.csv", sep=",", header=data_headers, index=False, encoding="utf-8", chunksize=1024)
+    y_train_df.to_csv(f"{output_dir}/y_train.csv", sep=",", header=label_headers, index=False, encoding="utf-8", chunksize=1024)
 
-X_val_df.to_csv(f"{output_dir}/X_val.csv", sep=",", header=data_headers, index=False, encoding="utf-8", chunksize=1024)
-y_val_df.to_csv(f"{output_dir}/y_val.csv", sep=",", header=label_headers, index=False, encoding="utf-8", chunksize=1024)
+    X_val_df.to_csv(f"{output_dir}/X_val.csv", sep=",", header=data_headers, index=False, encoding="utf-8", chunksize=1024)
+    y_val_df.to_csv(f"{output_dir}/y_val.csv", sep=",", header=label_headers, index=False, encoding="utf-8", chunksize=1024)
 
-X_test_df.to_csv(f"{output_dir}/X_test.csv", sep=",", header=data_headers, index=False, encoding="utf-8", chunksize=1024)
-y_test_df.to_csv(f"{output_dir}/y_test.csv", sep=",", header=label_headers, index=False, encoding="utf-8", chunksize=1024)
+    X_test_df.to_csv(f"{output_dir}/X_test.csv", sep=",", header=data_headers, index=False, encoding="utf-8", chunksize=1024)
+    y_test_df.to_csv(f"{output_dir}/y_test.csv", sep=",", header=label_headers, index=False, encoding="utf-8", chunksize=1024)
+
+if __name__ == "__main__":
+    main()
