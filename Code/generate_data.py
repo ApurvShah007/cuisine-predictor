@@ -53,7 +53,6 @@ def create_data(review_path, business_path="../Data/yelp_academic_dataset_busine
         review_id = review_object["review_id"]                      # get the review ID
         business_id = review_object["business_id"]                  # get the ID of the business being reviewed
         review_text = review_object["text"].lower().strip()         # get the review itself
-        review_year = review_object["date"][:4]                     # get the year of the review
         stars = review_object["stars"]                              # get the star rating of the review
 
         # if the business being reviewed is not a restaurant, then ignore it
@@ -74,7 +73,6 @@ def create_data(review_path, business_path="../Data/yelp_academic_dataset_busine
                 business_dict[business_id]["state"],
                 cuisine,
                 review_id,
-                review_year,
                 review_text
         ]
 
@@ -111,7 +109,7 @@ def main():
 
 
     # write out each dataframe to csv
-    data_headers = ["BusinessId", "Name", "City", "State", "Cuisine", "ReviewId", "Year", "Review"]
+    data_headers = ["BusinessId", "Name", "City", "State", "Cuisine", "ReviewId", "Review"]
     label_headers = ["Sentiment"]
 
     X_train_df.to_csv(f"{output_dir}/X_train.csv", sep=",", header=data_headers, index=False, encoding="utf-8", chunksize=1024)
