@@ -55,9 +55,9 @@ def get_state_data(df, labels, state):
 
     return desired_reviews, desired_labels
 
-def analyze_predictions(state, state_data, state_predictions):
+def get_five_best_cuisines_for_state(state, state_data, state_predictions):
     """
-    Function to analyze the predictions made by the model for the specified state.
+    Function to get the top five cuisines for the specified state.
 
     Params:
     state: The desired state to analyze.
@@ -84,34 +84,9 @@ def analyze_predictions(state, state_data, state_predictions):
         num_negative_reviews_per_cuisine.append(num_negative_reviews)
         num_positive_reviews_per_cuisine.append(num_positive_reviews)
     
-
     # convert the arrays to numpy arrays
     num_negative_reviews_per_cuisine = np.array(num_negative_reviews_per_cuisine)
     num_positive_reviews_per_cuisine = np.array(num_positive_reviews_per_cuisine)
-
-    """
-    # get top five cuisines
-    top_5_indices = np.argsort(num_positive_reviews_per_cuisine)[-5:]
-    top_5_negative_reviews = num_negative_reviews_per_cuisine[top_5_indices]
-    top_5_positive_reviews = num_positive_reviews_per_cuisine[top_5_indices]
-    top_5_cuisines = cuisines[top_5_indices]
-
-    # plot the results
-    df = pd.DataFrame({
-        "Positive Reviews": top_5_positive_reviews,
-        "Negative Reviews": top_5_negative_reviews},
-        index=top_5_cuisines
-    )
-
-    color_list = ["darkviolet", "hotpink"]
-    ax = df.plot.barh(stacked=True, color=color_list)
-
-    ax.set_title(f"Number of Predicted Negative/Positive Reviews Per Cuisine for {state.upper()}")
-    ax.set_xlabel("Number of Predicted Reviews")
-
-    plt.tight_layout()
-    plt.show()
-    """
 
     # compute the positve:negative ratio for each cuisine
     pos_neg_ratio = num_positive_reviews_per_cuisine / (num_negative_reviews_per_cuisine + 1)
@@ -123,6 +98,59 @@ def analyze_predictions(state, state_data, state_predictions):
     best_ratios = pos_neg_ratio[sorted_ratio_indices]
     best_cuisines = cuisines[sorted_ratio_indices]
 
+    # return the best cuisines and their respective ratios
+    return best_cuisines, best_ratios
+
+def get_best_restaurants_for_state(state_data, state_predictions, best_cuisines_for_state):
+    best_restaurants = []
+
+    for cuisine in best_cuisines_for_state:
+        # get the indices of the data that match the current cuisine
+        cuisine_indices = state_data["Cuisine"] == cuisine
+
+        # get the data and the labels for the cuisine
+        restaurant_data = state_data[cuisine_indices]
+        labels = state_predictions[cuisine_indices]
+
+        # get all the names of the restaurants
+        restaurants = set(restaurant_data["Name"])
+
+        best_ratio = float("-inf")
+        best_restaurant = None
+
+        # iterate over all of the businesses
+        for restaurant in restaurants:
+            # get all the data rows whose review corresponds to the current business
+            restaurant_indices = restaurant_data["Name"] == restaurant
+
+            # get the number of positive and negative reviews for the business
+            num_positive_reviews = (labels[restaurant_indices] == 1).sum()
+            num_negative_reviews = (labels[restaurant_indices] == 0).sum()
+
+            # compute the ratio
+            ratio = num_positive_reviews / (num_negative_reviews + 1)
+
+            # check if this ratio is better than our current best
+            if ratio > best_ratio:
+                best_ratio = ratio
+                best_restaurant = restaurant
+        
+        # add the business to an array
+        best_restaurants.append(best_restaurant)
+
+    # return the best restaurants
+    return best_restaurants
+
+def graph_five_best_cuisines_for_state(state, best_cuisines, best_ratios):
+    """
+    Graph the best cuisines ranked by their ratios.
+
+    Params:
+    state: The current state.
+    best_cuisines: The best cuisines for the specified state.
+    best_ratio: The ratio of the cuisines.
+    """
+
     # plot the results
     fig, ax = plt.subplots()
 
@@ -130,7 +158,7 @@ def analyze_predictions(state, state_data, state_predictions):
     ax.set_yticks(np.arange(len(best_cuisines)), labels=best_cuisines)
     ax.invert_yaxis()
     ax.set_xlabel("Ratio of Predicted Positive/Negative Reviews")
-    ax.set_title(f"Top 5 Predicted Best Cuisines in {state.upper()}")
+    ax.set_title(f"Top {len(best_cuisines)} Predicted Best Cuisines in {state.upper()}")
 
     plt.tight_layout()
     plt.show()
@@ -160,14 +188,18 @@ def main():
         # calculate the accuracy of the model for the given state
         current_state_accuracy = accuracy_score(current_state_labels, current_state_predictions) * 100
 
-        # analyze the predictions
-        analyze_predictions(state, current_state_data, current_state_predictions)
+        # get the best cuisines for the current states
+        best_cuisines_for_current_state, best_ratios_for_current_state = get_five_best_cuisines_for_state(state, current_state_data, current_state_predictions)
+        graph_five_best_cuisines_for_state(state, best_cuisines_for_current_state, best_ratios_for_current_state)
+
+        # get the best restaurant for each cuisine for the current state
+        best_restaurants_for_current_state = get_best_restaurants_for_state(current_state_data, current_state_predictions, best_cuisines_for_current_state)
 
         # add the (state, accuracy) tuple to the results array to be displayed later
-        results.append([state, current_state_accuracy])
+        results.append([state.upper(), current_state_accuracy, best_cuisines_for_current_state[0].capitalize(), best_restaurants_for_current_state[0]])
 
     # display the results
-    # print(tabulate(results, headers=["State", "Sentiment Analysis Accuracy"]))
+    print(tabulate(results, headers=["State", "Sentiment Analysis Accuracy", "Best Cuisine", "Best Restaurant for Cuisine"]))
 
 if __name__ == "__main__":
     main()
