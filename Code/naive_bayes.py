@@ -5,10 +5,12 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics import accuracy_score, confusion_matrix
 
 class NaiveBayes():
-    def  __init__(self, alpha):
+    def  __init__(self, alpha, vectorize=False):
         # hyperparameter for laplace smoothing -- avoid zero frequency problem
         # cannot be negative
         self.alpha = 1 if alpha <= 0 else alpha
+        self.vectorize = vectorize
+        self.vectorizer = CountVectorizer() if vectorize else None
 
         self.POS_LABEL = 1
         self.NEG_LABEL = 0
@@ -33,6 +35,10 @@ class NaiveBayes():
         X_train: The training data.
         y_train: The training labels.
         """
+
+        # check if we need to vectorize
+        if self.vectorize:
+            X_train = self.vectorizer.fit_transform(X_train["Review"])
 
         # compute the class probabilities
         self.log_class_probabilities[self.NEG_LABEL] = np.log(np.sum(y_train == self.NEG_LABEL) / len(y_train))
@@ -81,6 +87,10 @@ class NaiveBayes():
         Returns:
         y_pred: The predictions for the specified test set.
         """
+
+        # check if we need to vectorize
+        if self.vectorize:
+            X_test = self.vectorizer.transform(X_test["Review"])
 
         y_pred = np.array([self.__predict(test_review) for test_review in X_test])
         return y_pred
