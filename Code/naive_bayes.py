@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics import accuracy_score, confusion_matrix
+from nltk.corpus import stopwords
 
 class NaiveBayes():
     def  __init__(self, alpha, vectorize=False):
@@ -10,7 +11,7 @@ class NaiveBayes():
         # cannot be negative
         self.alpha = 1 if alpha <= 0 else alpha
         self.vectorize = vectorize
-        self.vectorizer = CountVectorizer() if vectorize else None
+        self.vectorizer = CountVectorizer(stop_words=stopwords.words("english")) if vectorize else None
 
         self.POS_LABEL = 1
         self.NEG_LABEL = 0
@@ -118,7 +119,7 @@ def load_data():
     y_test = pd.read_csv("../Data/y_test.csv")["Sentiment"].astype(int).values
 
     # create our count vectorizer and transform our data
-    vectorizer = CountVectorizer()
+    vectorizer = CountVectorizer(stop_words=stopwords.words("english"))
     X_train = vectorizer.fit_transform(X_train)
     X_val = vectorizer.transform(X_val)
     X_test = vectorizer.transform(X_test)
