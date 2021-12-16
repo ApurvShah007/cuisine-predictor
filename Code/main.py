@@ -31,137 +31,172 @@ def load_data():
     # return the data
     return X_train, y_train, X_val, y_val, X_test, y_test
 
-def get_state_data(df, labels, state):
+def get_cuisine_trends(state_data, state_predictions):
     """
-    Function which extracts all those rows whose businesses reside in the given
-    city.
+    Gets the predicted best cuisine type over the years of 2011 to 2021 
+    for the current state.
 
     Params:
-    df: The data dataframe.
-    labels; The labels for the dataframe.
-    state: The desired state to filter on.
+    state_data: The dataframe containing information on the desired state.
+    state_predictions: The predicted sentiments on the restaurants in state_data.
 
     Returns:
-    data: All the reviews of businesses which reside in the specified state.
-    labels: The labels for the data.
+    best_cuisine_per_year: An array of the form [(year, best_cuisine, sentiment_score)]
+    where the year corresponds to the year, best_cuisine corresponds to the best
+    cuisine for that year, and sentiment_score is the score that was given to
+    the best_cuisine.
     """
 
-    # get all the row indices which match the desired state
-    desired_indices = df["State"] == state
-
-    # extract the reviews and labels from the data dataframe
-    desired_reviews = df.loc[desired_indices]
-    desired_labels = labels[desired_indices]
-
-    return desired_reviews, desired_labels
-
-def get_five_best_cuisines_for_state(state, state_data, state_predictions):
-    """
-    Function to get the top five cuisines for the specified state.
-
-    Params:
-    state: The desired state to analyze.
-    predictions: The predictions made by the model for the specified state.
-    """
-
+    years = [year for year in range(2021-10, 2022)]
     cuisines = np.array(['afghan', 'african','american (new)', 'american (traditional)', 'arabian', 'argentine', 'armenian', 'asian fusion', 'australian', 'austrian', 'bangladeshi', 'basque', 'belgian', 'brazilian', 'british', 'bulgarian', 'burmese', 'cajun/creole', 'cambodian', 'caribbean', 'catalan', 'chinese', 'cuban', 'czech', 'eritrean', 'ethiopian', 'filipino', 'french', 'georgian', 'german', 'greek', 'guamanian', 'halal', 'hawaiian', 'himalayan/nepalese', 'honduran', 'hungarian', 'iberian', 'indian', 'indonesian', 'irish', 'italian', 'japanese', 'korean', 'kosher', 'laotian', 'latin american', 'malaysian', 'mediterranean', 'middle eastern', 'mongolian', 'moroccan', 'new mexican cuisine', 'nicaraguan', 'pakistani', 'persian/iranian', 'peruvian', 'polish', 'polynesian', 'portuguese', 'russian', 'scandinavian', 'scottish', 'singaporean', 'slovakian', 'somali', 'spanish', 'sri lankan', 'syrian', 'taiwanese', 'thai', 'turkish', 'ukrainian', 'uzbek', 'vietnamese'])
-    num_positive_reviews_per_cuisine = []
-    num_negative_reviews_per_cuisine = []
 
-    # iterate over the state data and get the number of positive reviews for each cuisine
-    for cuisine in cuisines:
-        # get the indices of the reviews/labels which match the current cuisine
-        current_cuisine_indices = state_data["Cuisine"] == cuisine
 
-        # get all the labels for the current cuisine
-        current_cuisine_labels = state_predictions[current_cuisine_indices]
-        
-        # get the number of negative/positive reviews
-        num_negative_reviews = (current_cuisine_labels == 0).sum()
-        num_positive_reviews = (current_cuisine_labels == 1).sum()
+    best_cuisine_per_year = []
 
-        # add the reviews to the respective arrays
-        num_negative_reviews_per_cuisine.append(num_negative_reviews)
-        num_positive_reviews_per_cuisine.append(num_positive_reviews)
-    
-    # convert the arrays to numpy arrays
-    num_negative_reviews_per_cuisine = np.array(num_negative_reviews_per_cuisine)
-    num_positive_reviews_per_cuisine = np.array(num_positive_reviews_per_cuisine)
+    for year in years:
+        # get the data and labels from the current year
+        year_data, year_labels = state_data[state_data["Year"] == year], state_predictions[state_data["Year"] == year]
 
-    # compute the positve:negative ratio for each cuisine
-    pos_neg_ratio = num_positive_reviews_per_cuisine / (num_negative_reviews_per_cuisine + 1)
+        # iterate over the cuisines
+        best_cuisine = None
+        best_sentiment_score = float("-inf")
+        for cuisine in cuisines:
+            # get the data and labels from the current cuisine
+            cuisine_data, cuisine_labels = year_data[year_data["Cuisine"] == cuisine], year_labels[year_data["Cuisine"] == cuisine]
 
-    # sort the ratios -- we only care about the indices -- only want top 5 (descending order) for display
-    sorted_ratio_indices = np.argsort(pos_neg_ratio)[::-1][:5]
-
-    # use the sorted indices to get the top 5 cuisines and their ratios
-    best_ratios = pos_neg_ratio[sorted_ratio_indices]
-    best_cuisines = cuisines[sorted_ratio_indices]
-
-    # return the best cuisines and their respective ratios
-    return best_cuisines, best_ratios
-
-def get_best_restaurants_for_state(state_data, state_predictions, best_cuisines_for_state):
-    best_restaurants = []
-
-    for cuisine in best_cuisines_for_state:
-        # get the indices of the data that match the current cuisine
-        cuisine_indices = state_data["Cuisine"] == cuisine
-
-        # get the data and the labels for the cuisine
-        restaurant_data = state_data[cuisine_indices]
-        labels = state_predictions[cuisine_indices]
-
-        # get all the names of the restaurants
-        restaurants = set(restaurant_data["Name"])
-
-        best_ratio = float("-inf")
-        best_restaurant = None
-
-        # iterate over all of the businesses
-        for restaurant in restaurants:
-            # get all the data rows whose review corresponds to the current business
-            restaurant_indices = restaurant_data["Name"] == restaurant
-
-            # get the number of positive and negative reviews for the business
-            num_positive_reviews = (labels[restaurant_indices] == 1).sum()
-            num_negative_reviews = (labels[restaurant_indices] == 0).sum()
+            # compute the number of positive and negative reviews for this cuisine type
+            num_positive_reviews = (cuisine_labels == 1).sum()
+            num_negative_reviews = (cuisine_labels == 0).sum()
 
             # compute the ratio
-            ratio = num_positive_reviews / (num_negative_reviews + 1)
+            sentiment_score = num_positive_reviews / (num_negative_reviews + 1)
 
-            # check if this ratio is better than our current best
-            if ratio > best_ratio:
-                best_ratio = ratio
-                best_restaurant = restaurant
+            # check if we can update the best_cuisine variable
+            if sentiment_score > best_sentiment_score:
+                best_sentiment_score = sentiment_score
+                best_cuisine = cuisine
         
-        # add the business to an array
-        best_restaurants.append(best_restaurant)
+        best_cuisine_per_year.append((year, best_cuisine, best_sentiment_score))
+    
+    return best_cuisine_per_year
 
-    # return the best restaurants
-    return best_restaurants
-
-def graph_five_best_cuisines_for_state(state, best_cuisines, best_ratios):
+def graph_cuisine_trends(state, trends):
     """
-    Graph the best cuisines ranked by their ratios.
+    Graph the given historic trends for the specified state.
 
     Params:
-    state: The current state.
-    best_cuisines: The best cuisines for the specified state.
-    best_ratio: The ratio of the cuisines.
+    state: The state to display trends for.
+    trends: See the return of get_cuisine_trends.
     """
 
-    # plot the results
+    x = [trend[0] for trend in trends] # the years
+    labels = [trend[1] for trend in trends] # get the type of cuisine
+    height = [trend[2] for trend in trends] # the sentiment score
+    width = 0.8 # width of the bars
+
     fig, ax = plt.subplots()
 
-    ax.barh(np.arange(len(best_cuisines)), best_ratios, align="center")
-    ax.set_yticks(np.arange(len(best_cuisines)), labels=best_cuisines)
-    ax.invert_yaxis()
-    ax.set_xlabel("Ratio of Predicted Positive/Negative Reviews")
-    ax.set_title(f"Top {len(best_cuisines)} Predicted Best Cuisines in {state.upper()}")
+    font = {
+            "fontweight" : "bold",
+            "fontsize"   : 6}
 
-    plt.tight_layout()
+    bar_chart = ax.bar(np.arange(len(x)), height, align="center", width=width)
+
+    plt.title(f"Most Popular Predicted Cuisine by Year for {state.upper()}", pad=20)
+    plt.xlabel("Year")
+    plt.xticks(np.arange(len(x)), x)
+    plt.ylabel("Sentiment Score")
+
+    # attach the cuisine type to each bar
+    for i, bar in enumerate(bar_chart):
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width()/2., 1.05*height,
+                "%s" % labels[i],
+                ha="center", va="bottom", **font)
+    
     plt.show()
+
+def get_best_overall_cuisine(state_data, state_predictions):
+    """
+    Function which gets the best cuisine and its sentiment score over all of
+    the available years.
+
+    Params:
+    state_data: The dataframe containing information on the state.
+    state_predictions: The predicted sentiment on the business in the state_data.
+
+    Returns:
+    best_cuisine: The overall best cuisine over all the available data for the state.
+    best_sentiment_score: The sentiment score for the best_cuisine.
+    """
+
+    # get list of cuisines
+    cuisines = np.array(['afghan', 'african','american (new)', 'american (traditional)', 'arabian', 'argentine', 'armenian', 'asian fusion', 'australian', 'austrian', 'bangladeshi', 'basque', 'belgian', 'brazilian', 'british', 'bulgarian', 'burmese', 'cajun/creole', 'cambodian', 'caribbean', 'catalan', 'chinese', 'cuban', 'czech', 'eritrean', 'ethiopian', 'filipino', 'french', 'georgian', 'german', 'greek', 'guamanian', 'halal', 'hawaiian', 'himalayan/nepalese', 'honduran', 'hungarian', 'iberian', 'indian', 'indonesian', 'irish', 'italian', 'japanese', 'korean', 'kosher', 'laotian', 'latin american', 'malaysian', 'mediterranean', 'middle eastern', 'mongolian', 'moroccan', 'new mexican cuisine', 'nicaraguan', 'pakistani', 'persian/iranian', 'peruvian', 'polish', 'polynesian', 'portuguese', 'russian', 'scandinavian', 'scottish', 'singaporean', 'slovakian', 'somali', 'spanish', 'sri lankan', 'syrian', 'taiwanese', 'thai', 'turkish', 'ukrainian', 'uzbek', 'vietnamese'])
+
+    best_cuisine = None
+    best_sentiment_score = float("-inf")
+
+    # iterate over the each cuisine and get the one with the highest sentiment score
+    for cuisine in cuisines:
+        # get the predictions for the current cuisine
+        cuisine_labels = state_predictions[state_data["Cuisine"] == cuisine]
+        
+        # get number of positive and negative reviews
+        num_positive_reviews = (cuisine_labels == 1).sum()
+        num_negative_reviews = (cuisine_labels == 0).sum()
+
+        # compute sentiment score
+        sentiment_score = num_positive_reviews / (num_negative_reviews + 1)
+
+        # check if sentiment score is better than current best
+        if sentiment_score > best_sentiment_score:
+            best_sentiment_score = sentiment_score
+            best_cuisine = cuisine
+
+    return best_cuisine, best_sentiment_score
+
+def get_best_restaurant(state_data, state_predictions, best_overall_cuisine):
+    """
+    Function which returns the best restaurant that serves the specified best
+    overall cuisine for the given state.
+
+    Params:
+    state_data: The dataframe containing information on the state.
+    state_predictions: The predicted sentiment on the business in the state_data.
+    best_overall_cuisine: The cuisine to find the best restaurant for.
+
+    Returns:
+    best_restaurant: The name of the best restaurant which serves the specified cuisine.
+    best_sentiment_score: The sentiment score for the best_restaurant.
+    """
+
+    # get the cuisine data and labels for the 
+    cuisine_data = state_data[state_data["Cuisine"] == best_overall_cuisine]
+    cuisine_labels = state_predictions[state_data["Cuisine"] == best_overall_cuisine]
+
+    best_restaurant = None
+    best_sentiment_score = float("-inf")
+
+    restaurants = set(cuisine_data["BusinessId"]) # get the set of all available restaurants
+    for restaurant in restaurants:
+        # get the data and the labels for the current restaurant
+        restaurant_data = cuisine_data[cuisine_data["BusinessId"] == restaurant]
+        restaurant_labels = cuisine_labels[cuisine_data["BusinessId"] == restaurant]
+        restaurant_name = restaurant_data.loc[restaurant_data["BusinessId"] == restaurant, "Name"].iloc[0] # get the name of restaurant
+
+        # get the number of positive and negative reviews
+        num_positive_reviews = (restaurant_labels == 1).sum()
+        num_negative_reviews = (restaurant_labels == 0).sum()
+
+        # compute the sentiment score
+        sentiment_score = num_positive_reviews / (num_negative_reviews + 1)
+
+        # check if sentiment score is better than current best
+        if sentiment_score > best_sentiment_score:
+            best_sentiment_score = sentiment_score
+            best_restaurant = restaurant_name
+
+    return best_restaurant, best_sentiment_score
 
 def main():
     # set random seed to guarantee reproducibility
@@ -176,31 +211,35 @@ def main():
     # fit the model
     NB.fit(X_train, y_train)
 
-    # states we want to perform analysis on
+    # iterate over all the interested states
     results = []
     for state in ["ma", "tx", "wa"]:
-        # get the current state data and labels
-        current_state_data, current_state_labels = get_state_data(X_test, y_test, state)
-        
-        # use the model to make predictions for the given state
-        current_state_predictions = NB.predict(current_state_data)
+        # get the data and labels for the corresponding state
+        state_data = X_test[X_test["State"] == state]
+        # make predictions on the state data
+        state_predictions = NB.predict(state_data)
 
-        # calculate the accuracy of the model for the given state
-        current_state_accuracy = accuracy_score(current_state_labels, current_state_predictions) * 100
+        # get the cuisine trends over the last 10 years and graph the results
+        trends = get_cuisine_trends(state_data, state_predictions)
+        #graph_cuisine_trends(state, trends)
 
-        # get the best cuisines for the current states
-        best_cuisines_for_current_state, best_ratios_for_current_state = get_five_best_cuisines_for_state(state, current_state_data, current_state_predictions)
-        graph_five_best_cuisines_for_state(state, best_cuisines_for_current_state, best_ratios_for_current_state)
+        # get the overall cuisine
+        best_overall_cuisine, best_overall_cuisine_sentiment_score = get_best_overall_cuisine(state_data, state_predictions)
 
-        # get the best restaurant for each cuisine for the current state
-        best_restaurants_for_current_state = get_best_restaurants_for_state(current_state_data, current_state_predictions, best_cuisines_for_current_state)
+        # get the best restaurant for the best overall cuisine
+        best_restaurant, best_restaurant_sentiment_score = get_best_restaurant(state_data, state_predictions, best_overall_cuisine)
 
-        # add the (state, accuracy) tuple to the results array to be displayed later
-        results.append([state.upper(), current_state_accuracy, best_cuisines_for_current_state[0].capitalize(), best_restaurants_for_current_state[0]])
+        # add these results to table
+        results.append([
+            state.upper(),
+            best_overall_cuisine.capitalize(),
+            round(best_overall_cuisine_sentiment_score),
+            best_restaurant,
+            round(best_restaurant_sentiment_score)
+        ])
 
-    # display the results
-    print(tabulate(results, headers=["State", "Sentiment Analysis Accuracy", "Best Cuisine", "Best Restaurant for Cuisine"]))
+    # tabulate the results
+    print(tabulate(results, headers=["State", "Best Overall Cuisine", "Cuisine Sentiment Score", "Best Restaurant for Cuisine", "Restaurant Sentiment Score"]))
 
 if __name__ == "__main__":
     main()
-
