@@ -171,7 +171,7 @@ def main():
     X_train, y_train, X_val, y_val, X_test, y_test = load_data()
 
     # create our model
-    NB = NaiveBayes(alpha=12, vectorize=True)
+    NB = NaiveBayes(alpha=4, vectorize=True)
 
     # fit the model
     NB.fit(X_train, y_train)
